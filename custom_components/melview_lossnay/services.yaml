@@ -1,0 +1,80 @@
+set_maintenance_enabled:
+  name: Set maintenance tracking
+  description: Enable or disable local Lossnay maintenance reminders.
+  fields:
+    unit_id:
+      name: Unit ID
+      required: true
+      selector:
+        text:
+    enabled:
+      name: Enabled
+      required: true
+      selector:
+        boolean:
+
+set_maintenance_interval:
+  name: Set maintenance interval
+  description: Set a local filter/core maintenance interval in calendar months.
+  fields:
+    unit_id:
+      name: Unit ID
+      required: true
+      selector:
+        text:
+    item:
+      name: Maintenance item
+      required: true
+      selector:
+        select:
+          options:
+            - wash
+            - replace
+            - core
+    months:
+      name: Months
+      required: true
+      selector:
+        number:
+          min: 6
+          max: 36
+          step: 1
+          mode: box
+
+mark_maintenance_done:
+  name: Mark maintenance done
+  description: Reset the selected maintenance timer. Filter replacement also resets the wash timer and wash count.
+  fields:
+    unit_id:
+      name: Unit ID
+      required: true
+      selector:
+        text:
+    item:
+      name: Maintenance item
+      required: true
+      selector:
+        select:
+          options:
+            - wash
+            - replace
+            - core
+
+set_ventilation_mode:
+  name: Set ventilation mode
+  description: Set Lossnay, Auto Lossnay, or Bypass mode.
+  fields:
+    unit_id:
+      name: Unit ID
+      required: true
+      selector:
+        text:
+    mode:
+      name: Mode
+      required: true
+      selector:
+        select:
+          options:
+            - Lossnay
+            - Auto Lossnay
+            - Bypass

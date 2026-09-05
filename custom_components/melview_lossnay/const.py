@@ -8,7 +8,7 @@ DEFAULT_SCAN_INTERVAL = 30
 
 BASE_URL = "https://api.melview.net/api"
 
-PLATFORMS = ["fan", "select", "sensor", "calendar"]
+PLATFORMS = ["fan", "select", "sensor", "calendar", "binary_sensor", "switch", "number", "button"]
 
 MODE_TO_COMMAND = {
     "Lossnay": "MD1",

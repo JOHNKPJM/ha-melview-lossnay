@@ -46,8 +46,8 @@ def _heat_recovery_efficiency(data: dict[str, Any]) -> float | None:
         mode_value = int(data.get("setmode"))
     except (TypeError, ValueError):
         mode_value = None
-    if mode_value == 7:  # Explicit bypass: the heat exchanger is bypassed.
-        return 0
+    if mode_value == 7:  # Explicit bypass has no heat-recovery figure.
+        return None
 
     try:
         fan_value = int(data.get("setfan"))
@@ -73,7 +73,7 @@ def _active_efficiency_fraction(data: dict[str, Any]) -> float | None:
     except (TypeError, ValueError):
         mode_value = None
     if mode_value == 7:
-        return 0.0
+        return None
 
     try:
         fan_value = int(data.get("setfan"))
@@ -90,6 +90,11 @@ def _active_efficiency_fraction(data: dict[str, Any]) -> float | None:
 
 def _pre_warmed_air(data: dict[str, Any]) -> float | None:
     """Reproduce the app's supply-side Lossnay Core temperature."""
+    try:
+        if int(data.get("setmode")) == 7:
+            return None
+    except (TypeError, ValueError):
+        pass
     fresh = _number(data, "outdoortemp")
     stale = _number(data, "roomtemp")
     efficiency = _active_efficiency_fraction(data)
@@ -100,6 +105,11 @@ def _pre_warmed_air(data: dict[str, Any]) -> float | None:
 
 def _exhaust_air(data: dict[str, Any]) -> float | None:
     """Reproduce the app's exhaust-side Lossnay Core temperature."""
+    try:
+        if int(data.get("setmode")) == 7:
+            return None
+    except (TypeError, ValueError):
+        pass
     fresh = _number(data, "outdoortemp")
     stale = _number(data, "roomtemp")
     efficiency = _active_efficiency_fraction(data)

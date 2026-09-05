@@ -403,3 +403,9 @@ supplytemp - outdoortemp
 ```
 
 For example, `15.6 - 14.0 = 1.6 C`.
+
+## Local maintenance tracking (not a Melview API feature)
+
+As of v0.5.0, no verified Melview state field has been identified for filter life, filter condition, or filter replacement status. The integration therefore does **not** present maintenance timers as cloud/device telemetry.
+
+The optional filter wash, filter replacement, and Lossnay core inspection/cleaning schedules are stored locally by Home Assistant and reset manually by the user. They do not send maintenance commands to Melview.

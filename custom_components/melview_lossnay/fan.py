@@ -6,7 +6,8 @@ from typing import Any
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
@@ -50,6 +51,7 @@ class LossnayFan(LossnayEntity, FanEntity):
     def __init__(self, coordinator: LossnayCoordinator, unit_id: str) -> None:
         super().__init__(coordinator, unit_id)
         self._attr_unique_id = f"{unit_id}_fan"
+        self._maintenance_unsub = None
 
     @property
     def is_on(self) -> bool | None:
@@ -106,12 +108,75 @@ class LossnayFan(LossnayEntity, FanEntity):
         except (TypeError, ValueError):
             mode_value = None
 
-        attrs["ventilation_mode"] = MODE_VALUE_TO_NAME.get(mode_value)
+        mode_name = MODE_VALUE_TO_NAME.get(mode_value)
+        attrs["unit_id"] = self.unit_id
+        attrs["model"] = self.coordinator.capabilities.get(self.unit_id, {}).get("modelname") or "Lossnay ERV"
+        attrs["fault"] = self.state_data.get("fault") or "OK"
+        attrs["ventilation_mode"] = mode_name
         attrs["fan_speed"] = FAN_VALUE_TO_PRESET.get(fan_value)
-        efficiency = FAN_VALUE_TO_HEAT_RECOVERY.get(fan_value)
-        if efficiency is not None:
+
+        def number(key: str):
+            try:
+                value = self.state_data.get(key)
+                return None if value in (None, "") else round(float(value), 1)
+            except (TypeError, ValueError):
+                return None
+
+        fresh = number("outdoortemp")
+        stale = number("roomtemp")
+        api_efficiency = number("coreefficiency")
+        effective_bypass = mode_value == 7 or (
+            mode_value == 3 and api_efficiency is not None and api_efficiency <= 0.01
+        )
+        attrs["airflow_state"] = "Bypass" if effective_bypass else "Lossnay"
+        attrs["fresh_air_in"] = fresh
+        attrs["stale_air_out"] = stale
+
+        if effective_bypass:
+            attrs["exhaust_air"] = None
+            attrs["pre_warmed"] = None
+            attrs["heat_recovery_efficiency"] = None
+            if fresh is not None and stale is not None:
+                delta = round(abs(stale - fresh), 1)
+                attrs["bypass_effect"] = "Cooling" if fresh < stale else "Warming" if fresh > stale else "Balanced"
+                attrs["bypass_temperature_difference"] = delta
+        else:
+            efficiency = FAN_VALUE_TO_HEAT_RECOVERY.get(fan_value)
+            if efficiency is None and api_efficiency is not None:
+                efficiency = round(api_efficiency * 100, 1) if api_efficiency <= 1 else round(api_efficiency, 1)
             attrs["heat_recovery_efficiency"] = efficiency
+            if fresh is not None and stale is not None and efficiency is not None:
+                fraction = efficiency / 100
+                attrs["pre_warmed"] = round(fresh + fraction * (stale - fresh), 1)
+                attrs["exhaust_air"] = round(stale - fraction * (stale - fresh), 1)
+                attrs["incoming_air_temperature_change"] = round(attrs["pre_warmed"] - fresh, 1)
+            else:
+                attrs["pre_warmed"] = number("supplytemp")
+                attrs["exhaust_air"] = number("exhausttemp")
+
+        manager = getattr(self.coordinator, "maintenance_managers", {}).get(self.unit_id)
+        if manager is not None:
+            attrs["maintenance"] = manager.summary()
         return attrs
+
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        manager = getattr(self.coordinator, "maintenance_managers", {}).get(self.unit_id)
+        if manager is not None:
+            self._maintenance_unsub = async_dispatcher_connect(
+                self.hass, manager.signal, self._handle_maintenance_update
+            )
+
+    async def async_will_remove_from_hass(self) -> None:
+        if self._maintenance_unsub is not None:
+            self._maintenance_unsub()
+            self._maintenance_unsub = None
+        await super().async_will_remove_from_hass()
+
+    @callback
+    def _handle_maintenance_update(self) -> None:
+        self.async_write_ha_state()
 
     async def async_turn_on(
         self,
