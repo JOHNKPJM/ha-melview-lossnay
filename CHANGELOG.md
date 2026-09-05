@@ -2,6 +2,8 @@
 
 ## 0.5.0
 
+- Added a README interface preview showing Lossnay heat-recovery mode, Bypass cooling mode, and the optional maintenance UI.
+
 - Added optional rich `custom:lossnay-card` dashboard UI.
 - Added matching `custom:lossnay-maintenance-card` for separate maintenance display.
 - Added dynamic heat-recovery vs bypass airflow visualisation.

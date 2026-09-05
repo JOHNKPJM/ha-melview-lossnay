@@ -6,6 +6,14 @@ The integration provides normal Home Assistant entities **and an optional rich L
 
 > **Status:** Experimental/community integration. The Melview API is unofficial and reverse-engineered, so behaviour can vary by model, adapter, firmware, account, or region.
 
+## Interface preview
+
+The optional dashboard card is designed to feel like a purpose-built Lossnay controller rather than a collection of standard Home Assistant entities. The airflow graphic changes with the active ventilation mode, while maintenance tracking uses the same visual style.
+
+![Melview Lossnay Home Assistant interface preview](docs/images/interface-preview.png)
+
+> The preview uses example temperatures and maintenance dates to demonstrate the interface. Actual values come from your Lossnay/Melview data and local Home Assistant maintenance settings.
+
 ## v0.5.0 highlights
 
 - New optional **Lossnay rich dashboard card** with a dark app-like design.
