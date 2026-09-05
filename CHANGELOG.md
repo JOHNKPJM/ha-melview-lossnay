@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.1
+
+- Reworked the rich Lossnay card for narrow Home Assistant Sections layouts, including the common 5-column width.
+- Added card-container responsive breakpoints so layout follows the actual card width rather than the browser viewport.
+- Compact mode stacks the core and efficiency/cooling panel, keeps mode buttons readable, moves fan speed to a full-width row, and uses a 2x2 temperature grid.
+- Compact maintenance and footer layouts reduce vertical and horizontal crowding without removing functionality.
+- Added a preferred 5-column grid hint for supported Home Assistant dashboards.
+
+
 ## 0.5.0
 
 - Added a README interface preview showing Lossnay heat-recovery mode, Bypass cooling mode, and the optional maintenance UI.

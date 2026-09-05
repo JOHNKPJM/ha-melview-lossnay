@@ -108,6 +108,7 @@ Use resource type **JavaScript Module**.
 type: custom:lossnay-card
 entity: fan.lossnay
 maintenance: integrated
+# The card is responsive and is designed to fit a 5-column Sections tile.
 ```
 
 ### Main card without maintenance
@@ -278,3 +279,8 @@ Native Melview schedules use a different encoding from live controls.
 ## API documentation
 
 See [MELVIEW_API.md](MELVIEW_API.md) for the reverse-engineered API notes, including authentication, unit discovery, capabilities, current state, commands, temperature fields, and native schedules.
+
+### Compact Sections layout
+
+The rich card is responsive to its **actual Home Assistant card width**. In a Sections dashboard it is designed to work at the common **5-column** width without horizontal clipping. At narrow widths the Lossnay Core and efficiency/cooling panel stack, fan speed gets a full-width row, and temperature tiles switch to a 2 x 2 layout. You do not need to force the card to 12 columns.
+
