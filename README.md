@@ -5,8 +5,7 @@ A HACS-compatible custom Home Assistant integration for Mitsubishi Electric Loss
 This integration was built and tested around:
 
 - **Lossnay:** LGH-35RVX3-E
-- **Wi-Fi interface:** MAC-588IF-E 
-- **Melview device type:** `ERV`
+- **Wi-Fi interface:** MAC-588IF-E - **Melview device type:** `ERV`
 
 ## Features
 
@@ -103,3 +102,23 @@ Do not share your password or authentication cookie when posting logs.
 - Added a visible **Fan speed** selector with Auto and Speed 1-4.
 - Fan entity now exposes all five fan settings as preset modes.
 - Retains Home Assistant percentage control for the four fixed fan stages.
+
+## Native Melview schedules
+
+Version 0.2.0 adds read-only Home Assistant calendar support for native Melview schedules. Existing weekly Lossnay schedule events from `schedule.aspx` are expanded into Home Assistant calendar events and can be shown on a Calendar card or used as calendar automation triggers.
+
+Confirmed native schedule encoding:
+
+- Power Off: `mode=0`
+- Power On + Lossnay: `mode=11`
+- Power On + Auto: `mode=13`
+- Power On + Bypass: `mode=17`
+- Fan 1-4: `fanspeed=1..4`
+- Keep current fan speed: `fanspeed=-1`
+
+Schedule creation/edit/delete is intentionally not enabled yet because the Melview write payload has not been confirmed.
+
+
+## Melview API notes
+
+Reverse-engineered endpoint and command documentation is available in [MELVIEW_API.md](MELVIEW_API.md).

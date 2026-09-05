@@ -16,7 +16,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class LossnayCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
-    """Coordinate state polling for all discovered Lossnay units."""
+    """Coordinate state and native schedule polling."""
 
     def __init__(
         self,
@@ -34,12 +34,42 @@ class LossnayCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
         self.api = api
         self.units = units
         self.capabilities = capabilities
+        self.schedules_summary: dict[str, dict[str, Any]] = {}
+        self.schedules: dict[str, dict[str, Any]] = {}
+        self.schedule_rules_disabled = False
 
     async def _async_update_data(self) -> dict[str, dict[str, Any]]:
         try:
             states: dict[str, dict[str, Any]] = {}
             for unit_id in self.units:
                 states[unit_id] = await self.api.async_get_state(unit_id)
+
+            # Native schedules are optional. A schedule failure should not take
+            # the Lossnay itself offline, so retain prior schedule data if the
+            # endpoint is temporarily unavailable.
+            try:
+                summary = await self.api.async_get_schedules()
+                self.schedule_rules_disabled = str(
+                    summary.get("disablerules", "false")
+                ).lower() == "true"
+
+                raw_schedules = summary.get("schedules", [])
+                if isinstance(raw_schedules, list):
+                    self.schedules_summary = {
+                        str(item["id"]): item
+                        for item in raw_schedules
+                        if isinstance(item, dict) and item.get("id") is not None
+                    }
+
+                    details: dict[str, dict[str, Any]] = {}
+                    for schedule_id in self.schedules_summary:
+                        details[schedule_id] = await self.api.async_get_schedule(
+                            schedule_id
+                        )
+                    self.schedules = details
+            except MelviewError as err:
+                _LOGGER.warning("Unable to refresh Melview native schedules: %s", err)
+
             return states
         except MelviewAuthError as err:
             raise UpdateFailed(f"Authentication failed: {err}") from err

@@ -8,7 +8,7 @@ DEFAULT_SCAN_INTERVAL = 30
 
 BASE_URL = "https://api.melview.net/api"
 
-PLATFORMS = ["fan", "select", "sensor"]
+PLATFORMS = ["fan", "select", "sensor", "calendar"]
 
 MODE_TO_COMMAND = {
     "Heat Recovery": "MD1",
@@ -21,7 +21,7 @@ MODE_VALUE_TO_NAME = {
     7: "Bypass",
 }
 
-# Confirmed against LGH-35RVX3-E via Melview.
+# Confirmed against LGH-35RVX3-E via Melview live control.
 FAN_VALUE_TO_PERCENTAGE = {
     2: 25,
     3: 50,
@@ -36,8 +36,6 @@ PERCENTAGE_TO_FAN_VALUE = {
 }
 FAN_AUTO_VALUE = 0
 FAN_AUTO_PRESET = "Auto"
-
-# Confirmed Lossnay fan values (LGH-35RVX3-E).
 FAN_PRESET_TO_VALUE = {
     "Auto": 0,
     "Speed 1": 2,
@@ -46,3 +44,29 @@ FAN_PRESET_TO_VALUE = {
     "Speed 4": 6,
 }
 FAN_VALUE_TO_PRESET = {value: name for name, value in FAN_PRESET_TO_VALUE.items()}
+
+# Native Melview ERV schedule encoding discovered from schedule.aspx.
+SCHEDULE_MODE_VALUE_TO_NAME = {
+    0: "Power Off",
+    11: "Lossnay",
+    13: "Auto",
+    17: "Bypass",
+}
+SCHEDULE_FAN_VALUE_TO_NAME = {
+    -1: "Keep fan speed",
+    1: "Speed 1",
+    2: "Speed 2",
+    3: "Speed 3",
+    4: "Speed 4",
+}
+
+# Melview weekday bitmask: Sunday=1 through Saturday=64.
+SCHEDULE_WEEKDAY_BITS = {
+    6: 1,   # Sunday in Python weekday numbering is 6
+    0: 2,   # Monday
+    1: 4,   # Tuesday
+    2: 8,   # Wednesday
+    3: 16,  # Thursday
+    4: 32,  # Friday
+    5: 64,  # Saturday
+}

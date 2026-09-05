@@ -104,6 +104,28 @@ class MelviewApi:
             json={"unitid": str(unit_id), "v": 2},
         )
 
+    async def async_get_schedules(self) -> dict[str, Any]:
+        """Return the account native schedule summary."""
+        data = await self._request_json(
+            "POST",
+            "schedules.aspx",
+            json={"v": 2},
+        )
+        if not isinstance(data, dict):
+            raise MelviewError("Unexpected schedules response from Melview")
+        return data
+
+    async def async_get_schedule(self, schedule_id: str) -> dict[str, Any]:
+        """Return one native Melview schedule and its events."""
+        data = await self._request_json(
+            "POST",
+            "schedule.aspx",
+            json={"id": str(schedule_id), "v": 2},
+        )
+        if not isinstance(data, dict):
+            raise MelviewError("Unexpected schedule response from Melview")
+        return data
+
     async def async_command(self, unit_id: str, command: str) -> dict[str, Any]:
         """Send one compact Melview command, e.g. PW1, FS2, MD3."""
         data = await self._request_json(
