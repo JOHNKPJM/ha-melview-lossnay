@@ -300,7 +300,7 @@ def _parse_action(summary: str, description: Any = None) -> dict[str, str | None
 
     if mode is None:
         raise ValueError(
-            "Schedule title must specify Auto, Bypass, Lossnay, or Heat Recovery"
+            "Schedule title must specify Auto Lossnay, Auto, Bypass, Lossnay, or Heat Recovery"
         )
     return {"power": "on", "mode": mode, "fan": fan}
 
@@ -308,11 +308,13 @@ def _parse_action(summary: str, description: Any = None) -> dict[str, str | None
 def _normalise_mode(value: str) -> str:
     value = value.strip().lower()
     aliases = {
-        "auto": "Auto",
+        "auto": "Auto Lossnay",
+        "auto lossnay": "Auto Lossnay",
+        "auto-lossnay": "Auto Lossnay",
         "bypass": "Bypass",
-        "lossnay": "Heat Recovery",
-        "heat recovery": "Heat Recovery",
-        "heat-recovery": "Heat Recovery",
+        "lossnay": "Lossnay",
+        "heat recovery": "Lossnay",
+        "heat-recovery": "Lossnay",
     }
     if value not in aliases:
         raise ValueError(f"Unknown Lossnay mode: {value}")

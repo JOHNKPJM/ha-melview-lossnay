@@ -31,11 +31,10 @@ async def async_setup_entry(
 
 
 class LossnayVentilationMode(LossnayEntity, SelectEntity):
-    """Heat Recovery / Auto / Bypass mode selector."""
+    """Lossnay / Auto Lossnay / Bypass mode selector."""
 
     _attr_name = "Ventilation mode"
     _attr_options = list(MODE_TO_COMMAND)
-    _attr_icon = "mdi:air-filter"
 
     def __init__(self, coordinator: LossnayCoordinator, unit_id: str) -> None:
         super().__init__(coordinator, unit_id)
@@ -49,6 +48,15 @@ class LossnayVentilationMode(LossnayEntity, SelectEntity):
             return None
         return MODE_VALUE_TO_NAME.get(value)
 
+    @property
+    def icon(self) -> str:
+        """Use an icon that reflects the current airflow mode."""
+        return {
+            "Lossnay": "mdi:heat-wave",
+            "Auto Lossnay": "mdi:autorenew",
+            "Bypass": "mdi:swap-horizontal",
+        }.get(self.current_option, "mdi:air-filter")
+
     async def async_select_option(self, option: str) -> None:
         command = MODE_TO_COMMAND.get(option)
         if command is None:
@@ -57,11 +65,15 @@ class LossnayVentilationMode(LossnayEntity, SelectEntity):
 
 
 class LossnayFanSpeed(LossnayEntity, SelectEntity):
-    """Discrete Lossnay fan speed selector."""
+    """Discrete Lossnay fan speed selector retained for backwards compatibility."""
 
     _attr_name = "Fan speed"
     _attr_options = list(FAN_PRESET_TO_VALUE)
     _attr_icon = "mdi:fan"
+    # The main fan entity now provides Home Assistant's richer 4-stage speed
+    # control. Existing installs keep this entity; new installs can enable it if
+    # they prefer a named Speed 1-4 dropdown.
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator: LossnayCoordinator, unit_id: str) -> None:
         super().__init__(coordinator, unit_id)
@@ -80,7 +92,6 @@ class LossnayFanSpeed(LossnayEntity, SelectEntity):
         if value is None:
             raise ValueError(f"Unsupported fan speed: {option}")
 
-        # Ensure the unit is on before setting a fan speed.
         try:
             is_on = bool(int(self.state_data.get("power", 0)))
         except (TypeError, ValueError):

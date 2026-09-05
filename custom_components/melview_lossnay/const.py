@@ -11,13 +11,13 @@ BASE_URL = "https://api.melview.net/api"
 PLATFORMS = ["fan", "select", "sensor", "calendar"]
 
 MODE_TO_COMMAND = {
-    "Heat Recovery": "MD1",
-    "Auto": "MD3",
+    "Lossnay": "MD1",
+    "Auto Lossnay": "MD3",
     "Bypass": "MD7",
 }
 MODE_VALUE_TO_NAME = {
-    1: "Heat Recovery",
-    3: "Auto",
+    1: "Lossnay",
+    3: "Auto Lossnay",
     7: "Bypass",
 }
 
@@ -44,6 +44,17 @@ FAN_PRESET_TO_VALUE = {
     "Speed 4": 6,
 }
 FAN_VALUE_TO_PRESET = {value: name for name, value in FAN_PRESET_TO_VALUE.items()}
+
+# Lossnay heat-recovery efficiency figures used by the Mitsubishi app for each
+# fixed fan stage. The Melview API encodes Speed 1-4 as 2, 3, 5 and 6.
+# Auto fan has no single fixed efficiency, so the API-provided coreefficiency
+# value is used as a fallback when available.
+FAN_VALUE_TO_HEAT_RECOVERY = {
+    2: 82,
+    3: 79,
+    5: 77,
+    6: 75,
+}
 
 # Native Melview ERV schedule encoding discovered from schedule.aspx.
 SCHEDULE_MODE_VALUE_TO_NAME = {

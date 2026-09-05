@@ -10,9 +10,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
-    FAN_PRESET_TO_VALUE,
+    FAN_AUTO_PRESET,
+    FAN_VALUE_TO_HEAT_RECOVERY,
     FAN_VALUE_TO_PERCENTAGE,
     FAN_VALUE_TO_PRESET,
+    MODE_VALUE_TO_NAME,
     PERCENTAGE_TO_FAN_VALUE,
 )
 from .coordinator import LossnayCoordinator
@@ -30,7 +32,7 @@ async def async_setup_entry(
 
 
 class LossnayFan(LossnayEntity, FanEntity):
-    """Power and fan-speed control for a Lossnay ERV."""
+    """Primary Lossnay power and fan-speed control."""
 
     _attr_name = None
     _attr_supported_features = (
@@ -40,7 +42,10 @@ class LossnayFan(LossnayEntity, FanEntity):
         | FanEntityFeature.TURN_OFF
     )
     _attr_speed_count = 4
-    _attr_preset_modes = list(FAN_PRESET_TO_VALUE)
+    # Fan presets are reserved for the special automatic fan-speed setting.
+    # Fixed speeds are represented natively as 25/50/75/100 percent, which
+    # gives Home Assistant a proper stepped slider/dial instead of a dropdown.
+    _attr_preset_modes = [FAN_AUTO_PRESET]
 
     def __init__(self, coordinator: LossnayCoordinator, unit_id: str) -> None:
         super().__init__(coordinator, unit_id)
@@ -60,7 +65,6 @@ class LossnayFan(LossnayEntity, FanEntity):
         except (TypeError, ValueError):
             return None
 
-        # Auto has no meaningful percentage.
         if fan_value == 0:
             return None
         return FAN_VALUE_TO_PERCENTAGE.get(fan_value)
@@ -71,7 +75,43 @@ class LossnayFan(LossnayEntity, FanEntity):
             fan_value = int(self.state_data.get("setfan"))
         except (TypeError, ValueError):
             return None
-        return FAN_VALUE_TO_PRESET.get(fan_value)
+        return FAN_AUTO_PRESET if fan_value == 0 else None
+
+    @property
+    def icon(self) -> str:
+        """Show the active Lossnay airflow mode on the main control."""
+        if not self.is_on:
+            return "mdi:fan-off"
+        try:
+            mode_value = int(self.state_data.get("setmode"))
+        except (TypeError, ValueError):
+            mode_value = None
+        mode = MODE_VALUE_TO_NAME.get(mode_value)
+        return {
+            "Lossnay": "mdi:heat-wave",
+            "Auto Lossnay": "mdi:autorenew",
+            "Bypass": "mdi:swap-horizontal",
+        }.get(mode, "mdi:fan")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Surface useful Lossnay status alongside the main fan entity."""
+        attrs: dict[str, Any] = {}
+        try:
+            fan_value = int(self.state_data.get("setfan"))
+        except (TypeError, ValueError):
+            fan_value = None
+        try:
+            mode_value = int(self.state_data.get("setmode"))
+        except (TypeError, ValueError):
+            mode_value = None
+
+        attrs["ventilation_mode"] = MODE_VALUE_TO_NAME.get(mode_value)
+        attrs["fan_speed"] = FAN_VALUE_TO_PRESET.get(fan_value)
+        efficiency = FAN_VALUE_TO_HEAT_RECOVERY.get(fan_value)
+        if efficiency is not None:
+            attrs["heat_recovery_efficiency"] = efficiency
+        return attrs
 
     async def async_turn_on(
         self,
@@ -93,7 +133,6 @@ class LossnayFan(LossnayEntity, FanEntity):
             await self.async_turn_off()
             return
 
-        # Snap arbitrary HA percentages to the nearest supported stage.
         nearest = min(PERCENTAGE_TO_FAN_VALUE, key=lambda p: abs(p - percentage))
         value = PERCENTAGE_TO_FAN_VALUE[nearest]
         if not self.is_on:
@@ -101,9 +140,8 @@ class LossnayFan(LossnayEntity, FanEntity):
         await self.coordinator.async_send_command(self.unit_id, f"FS{value}")
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        value = FAN_PRESET_TO_VALUE.get(preset_mode)
-        if value is None:
+        if preset_mode != FAN_AUTO_PRESET:
             raise ValueError(f"Unsupported preset mode: {preset_mode}")
         if not self.is_on:
             await self.coordinator.async_send_command(self.unit_id, "PW1")
-        await self.coordinator.async_send_command(self.unit_id, f"FS{value}")
+        await self.coordinator.async_send_command(self.unit_id, "FS0")

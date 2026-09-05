@@ -373,3 +373,33 @@ Current integration direction:
 The integration also provides a writable Home Assistant calendar. These events are not written to `schedule.aspx`; they are stored locally in Home Assistant and execute the confirmed `PW`, `MD`, and `FS` commands at event time.
 
 Native Melview schedule creation/update/delete is intentionally not implemented until the schedule write request format is confirmed.
+
+## Lossnay app presentation values
+
+The Mitsubishi Lossnay app uses fixed heat-recovery efficiency values for the four manual fan stages. These values are useful for reproducing the app's Lossnay Core display in Home Assistant.
+
+| Live fan command | Fan stage | App heat recovery |
+| --- | --- | ---: |
+| `FS2` | Speed 1 | 82% |
+| `FS3` | Speed 2 | 79% |
+| `FS5` | Speed 3 | 77% |
+| `FS6` | Speed 4 | 75% |
+
+`FS0` is Auto fan speed and therefore does not have one fixed stage efficiency. When available, the integration uses the `coreefficiency` value returned by Melview for Auto.
+
+The app-facing airflow labels map to the API state as follows:
+
+| App label | API field |
+| --- | --- |
+| Fresh Air In | `outdoortemp` |
+| Stale Air Out | `roomtemp` |
+| Exhaust Air | `exhausttemp` |
+| Pre-warmed | `supplytemp` |
+
+The displayed incoming-air temperature change can be reproduced as:
+
+```text
+supplytemp - outdoortemp
+```
+
+For example, `15.6 - 14.0 = 1.6 C`.

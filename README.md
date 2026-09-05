@@ -2,81 +2,131 @@
 
 A Home Assistant custom integration for Mitsubishi Electric **Lossnay ERV** systems connected through the Australia/New Zealand **Melview / Mitsubishi Electric Wi-Fi Control** service.
 
-The integration brings Lossnay control, environmental telemetry, diagnostics, and scheduling into Home Assistant. It is designed for installation through HACS and uses the same Melview account as the Mitsubishi Electric Wi-Fi Control app.
+The integration is designed for HACS and uses the same Melview account as the Mitsubishi Electric Wi-Fi Control app. It brings Lossnay power, fan control, ventilation modes, airflow temperatures, heat-recovery information, diagnostics, and scheduling into Home Assistant.
 
 > **Status:** Experimental/community integration. The Melview API is unofficial and reverse-engineered, so behaviour may vary by Lossnay model, Wi-Fi adapter, firmware, account, or region.
 
-## Features
+## What you get
 
-### Lossnay control
+### Main Lossnay control
 
-Control the ERV directly from Home Assistant:
+The primary Home Assistant **fan entity** provides:
 
 - Power on/off
-- Ventilation mode
-  - Lossnay / Heat Recovery
-  - Auto
-  - Bypass
-- Fan control
-  - Auto
-  - Speed 1
-  - Speed 2
-  - Speed 3
-  - Speed 4
-- Fan speed is available both through the Home Assistant fan entity and as a dedicated **Fan speed** selector.
+- Four stepped fan speeds through Home Assistant's native fan-speed control
+  - 25% = Speed 1
+  - 50% = Speed 2
+  - 75% = Speed 3
+  - 100% = Speed 4
+- **Auto** fan-speed preset
+- A state-aware icon that follows the current ventilation mode
 
-### Sensors and status
+This makes the entity work well with Home Assistant Tile cards and other fan-aware dashboard cards, including slider/dial style speed controls where the selected frontend supports them.
 
-The integration exposes the telemetry returned by Melview, including:
+A separate **Fan speed** dropdown remains available for backwards compatibility. It is disabled by default on new installs because the main fan entity now provides the richer native control.
 
-- Indoor temperature
-- Outdoor temperature
-- Supply air temperature
-- Exhaust air temperature
-- Core efficiency
-- Fault/status information
+### Ventilation mode
 
-Additional device and capability information is obtained from Melview during discovery.
+The **Ventilation mode** selector follows the Mitsubishi app terminology:
+
+- **Lossnay** - heat recovery
+- **Auto Lossnay** - automatic Lossnay/bypass operation
+- **Bypass** - bypass the heat exchanger
+
+The entity icon changes with the selected mode:
+
+- Lossnay: heat-recovery style icon
+- Auto Lossnay: automatic/circulating icon
+- Bypass: straight-through airflow icon
+
+### Lossnay Core temperatures
+
+Temperature names now match the Mitsubishi app:
+
+| Home Assistant | Melview/API value | Meaning |
+| --- | --- | --- |
+| **Fresh Air In** | `outdoortemp` | Outside air entering the unit |
+| **Stale Air Out** | `roomtemp` | Indoor/return air entering the unit |
+| **Exhaust Air** | calculated, with `exhausttemp` fallback | Air being exhausted outdoors |
+| **Pre-warmed** | calculated, with `supplytemp` fallback | Conditioned fresh air supplied indoors |
+
+Existing entity unique IDs are retained for upgrades, so renaming these display names does not intentionally create duplicate temperature entities.
+
+### Heat recovery
+
+The integration exposes **Heat recovery efficiency** using the fixed fan-stage values used by the Mitsubishi app:
+
+| Fan speed | Heat recovery |
+| --- | ---: |
+| Speed 1 | 82% |
+| Speed 2 | 79% |
+| Speed 3 | 77% |
+| Speed 4 | 75% |
+
+For **Auto** fan speed, the integration falls back to the `coreefficiency` value reported by Melview when available.
+
+When the unit is explicitly in **Bypass**, heat recovery is reported as `0%`. When the unit is off, the heat-recovery sensor has no active value.
+
+The integration uses the active fan-stage efficiency to reproduce the app's two Lossnay Core temperatures from **Fresh Air In** and **Stale Air Out**. If the required inputs are unavailable, it falls back to Melview's `supplytemp` and `exhausttemp` fields.
+
+The integration also exposes **Incoming air temperature change**, calculated as:
+
+```text
+Pre-warmed - Fresh Air In
+```
+
+For example, Fresh Air In at `14.0 C` and Pre-warmed at `15.6 C` gives an incoming-air increase of `1.6 C`, matching the style of information shown by the Mitsubishi app.
+
+### Diagnostics
+
+- Fault/status
+- Model and adapter information discovered from Melview
+- Raw state continues to be polled from the Lossnay through Melview
 
 ## Scheduling
 
-The integration provides two different schedule calendars.
+The integration provides two schedule calendars.
 
 ### Home Assistant schedule
 
-The **Home Assistant schedule** is writable and lets you create, edit, and delete Lossnay schedules from Home Assistant.
+The **Home Assistant schedule** is writable. Events created in Home Assistant can directly control the Lossnay using the same Melview commands as the normal entities.
 
-These schedules are stored in Home Assistant and execute the normal Melview control commands at the scheduled time.
-
-Create an event in the Home Assistant calendar using a title such as:
+Example event titles:
 
 ```text
 Power Off
-Auto
-Auto | Speed 1
-Auto | Speed 2
-Auto | Speed 3
-Auto | Speed 4
-Auto | Auto
+Auto Lossnay
+Auto Lossnay | Speed 1
+Auto Lossnay | Speed 2
+Auto Lossnay | Speed 3
+Auto Lossnay | Speed 4
+Auto Lossnay | Auto
 Bypass | Speed 1
 Lossnay | Speed 1
-Heat Recovery | Speed 4
+Lossnay | Speed 4
 ```
 
-`Lossnay` and `Heat Recovery` refer to the same ventilation mode.
-
-If the title contains only a mode, the current fan speed is left unchanged:
+For backwards compatibility, schedule parsing also accepts:
 
 ```text
 Auto
+Heat Recovery
+```
+
+These are interpreted as **Auto Lossnay** and **Lossnay** respectively.
+
+If the title contains only a ventilation mode, the current fan speed is left unchanged:
+
+```text
+Auto Lossnay
 Bypass
 Lossnay
 ```
 
-You can alternatively specify the action in the event description:
+You can alternatively put commands in the event description:
 
 ```text
-mode=Auto
+mode=Auto Lossnay
 fan=Speed 2
 ```
 
@@ -96,9 +146,7 @@ FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
 
 The integration also discovers the Lossnay's existing **native Melview schedule** and exposes it as a read-only Home Assistant calendar.
 
-This allows schedules configured in the Mitsubishi app to be viewed from Home Assistant without modifying them.
-
-Native schedule actions currently understood by the integration include:
+Native schedule actions currently understood include:
 
 - Power Off
 - Power On + Lossnay
@@ -107,9 +155,9 @@ Native schedule actions currently understood by the integration include:
 - Fan speeds 1-4
 - Keep current fan speed
 
-Native Melview schedule creation/editing is intentionally read-only until the schedule-write API has been fully verified.
+Native Melview schedule creation/editing remains read-only until the write API has been fully verified.
 
-> Avoid creating overlapping native Melview and Home Assistant schedules unless you intentionally want both systems controlling the Lossnay.
+> Avoid overlapping native Melview and Home Assistant schedules unless you intentionally want both systems controlling the Lossnay.
 
 ## Home Assistant entities
 
@@ -117,19 +165,39 @@ A typical Lossnay device provides:
 
 | Entity | Purpose |
 | --- | --- |
-| Fan | Power and fan control |
-| Fan speed | Auto / Speed 1-4 selector |
-| Ventilation mode | Lossnay / Auto / Bypass |
-| Indoor temperature | Return/room temperature reported by Melview |
-| Outdoor temperature | Outdoor air temperature |
-| Supply temperature | Supply air temperature |
-| Exhaust temperature | Exhaust air temperature |
-| Core efficiency | Reported heat-exchanger efficiency |
-| Fault | Current fault/status |
-| Native Melview schedule | Read-only Mitsubishi schedule calendar |
-| Home Assistant schedule | Writable Home Assistant schedule calendar |
+| **Lossnay fan** | Main power + 4-stage speed control + Auto fan preset |
+| **Ventilation mode** | Lossnay / Auto Lossnay / Bypass with dynamic icon |
+| **Fresh Air In** | Outside air entering the Lossnay |
+| **Stale Air Out** | Indoor/return air entering the Lossnay |
+| **Exhaust Air** | Exhaust air leaving the Lossnay |
+| **Pre-warmed** | Fresh supply air after the Lossnay core |
+| **Heat recovery efficiency** | 82/79/77/75% by fixed fan speed; API fallback on Auto |
+| **Incoming air temperature change** | Pre-warmed minus Fresh Air In |
+| **Fault** | Current Lossnay fault/status |
+| **Home Assistant schedule** | Writable HA-managed calendar |
+| **Native Melview schedule** | Read-only Mitsubishi schedule calendar |
+| **Fan speed** | Legacy Auto / Speed 1-4 dropdown; disabled by default on new installs |
 
 The exact entities available can depend on the capabilities reported by the unit.
+
+## Dashboard ideas
+
+The integration deliberately uses standard Home Assistant entities rather than requiring a bundled custom dashboard card.
+
+A useful dashboard arrangement is:
+
+1. A large **Tile card** for the Lossnay fan, with fan-speed controls enabled.
+2. The **Ventilation mode** entity directly below it so the mode icon changes between Lossnay, Auto Lossnay, and Bypass.
+3. Four compact temperature tiles arranged like the Lossnay core:
+   - Fresh Air In
+   - Stale Air Out
+   - Exhaust Air
+   - Pre-warmed
+4. A prominent **Heat recovery efficiency** tile.
+5. **Incoming air temperature change** beside it.
+6. The Home Assistant schedule calendar underneath.
+
+This gives a dashboard similar in usefulness to the Mitsubishi app while remaining completely native to Home Assistant and responsive across desktop and mobile.
 
 ## Installation with HACS
 
@@ -142,56 +210,13 @@ This repository can be installed as a HACS custom repository.
 5. Select **Integration** as the repository type.
 6. Install **Mitsubishi Lossnay (Melview)**.
 7. Restart Home Assistant.
+8. Go to **Settings -> Devices & services -> Add Integration**.
+9. Search for **Mitsubishi Lossnay (Melview)**.
+10. Enter the same credentials used by the Mitsubishi Electric Wi-Fi Control / Melview app.
 
-Then go to:
+The integration discovers Lossnay units associated with the account.
 
-**Settings → Devices & services → Add Integration**
-
-Search for:
-
-**Mitsubishi Lossnay (Melview)**
-
-Enter the credentials used by your Mitsubishi Electric Wi-Fi Control / Melview account.
-
-The integration will discover Lossnay units associated with the account.
-
-## Dashboard use
-
-After setup, open the Lossnay device under:
-
-**Settings → Devices & services → Mitsubishi Lossnay (Melview)**
-
-The entities can be added to any Home Assistant dashboard.
-
-Useful dashboard controls include:
-
-- Fan card/tile for power
-- Fan speed selector
-- Ventilation mode selector
-- Temperature sensors
-- Core efficiency
-- Fault status
-- Calendar card for schedules
-
-## How it works
-
-The integration communicates with the cloud Melview service rather than directly controlling the Lossnay over the local network.
-
-It:
-
-1. Authenticates using the configured Melview account.
-2. Discovers ERV/Lossnay units.
-3. Queries model capabilities.
-4. Polls current Lossnay state.
-5. Sends confirmed Melview commands for power, ventilation mode, and fan speed.
-6. Reads native Melview schedules.
-7. Runs optional Home Assistant-managed schedules using those same control commands.
-
-The integration is currently classified as **cloud polling**.
-
-## Confirmed control mappings
-
-The following live Melview commands have been confirmed:
+## Confirmed live-control mappings
 
 ### Power
 
@@ -204,7 +229,7 @@ PW0 = Off
 
 ```text
 MD1 = Lossnay / Heat Recovery
-MD3 = Auto
+MD3 = Auto Lossnay
 MD7 = Bypass
 ```
 
@@ -218,36 +243,52 @@ FS5 = Speed 3
 FS6 = Speed 4
 ```
 
-Native Melview schedules use a different encoding from live control commands. Those mappings and the discovered API endpoints are documented separately.
+Native Melview schedules use a different encoding from live control commands.
 
 ## Melview API documentation
 
-This project includes [MELVIEW_API.md](MELVIEW_API.md), which records the reverse-engineered Melview API information discovered during development.
-
-It includes:
+This project includes [MELVIEW_API.md](MELVIEW_API.md), which records the reverse-engineered API information discovered during development, including:
 
 - Authentication
 - Unit discovery
 - Capability discovery
 - State queries
 - Power/mode/fan commands
+- Temperature fields
+- Heat-recovery values
 - Native schedule endpoints
 - Native schedule event format
 - Weekday bitmasks
 - Schedule mode and fan mappings
 - Candidate endpoints investigated during development
 
-This is intended both as project documentation and as a starting point for anyone who wants to investigate additional Lossnay/Melview functionality.
+The API notes are intentionally kept in the repository so future contributors can extend the integration without having to rediscover the control surface from scratch.
+
+## Version 0.4.0
+
+This release focuses on presentation and usability:
+
+- Renames airflow temperature entities to match the Mitsubishi app.
+- Adds fixed fan-stage heat-recovery values: 82%, 79%, 77%, and 75%.
+- Adds Incoming air temperature change.
+- Changes displayed ventilation modes to Lossnay / Auto Lossnay / Bypass.
+- Adds mode-aware icons.
+- Makes the main fan entity the preferred four-stage speed control.
+- Keeps Auto fan speed as a fan preset.
+- Keeps the legacy Fan speed select for upgraded installations but disables it by default for new installs.
+- Preserves existing temperature entity unique IDs to reduce upgrade churn.
+- Keeps old schedule wording such as Auto and Heat Recovery as accepted aliases.
 
 ## Known limitations
 
 - Melview is an unofficial/reverse-engineered API and may change without notice.
-- Control currently depends on the Melview cloud service.
+- Control depends on the Melview cloud service.
 - Native Mitsubishi schedules can be read but not created or edited by this integration.
 - Home Assistant-managed schedules require Home Assistant to be running and able to reach Melview when an event fires.
 - Weekly recurrence is the currently supported recurring pattern for Home Assistant-managed schedules.
 - Not every Lossnay model, adapter, or regional Melview implementation has been tested.
 - Features available in Mitsubishi controllers or apps are not necessarily exposed through Melview.
+- The integration exposes native Home Assistant entities; it does not install a proprietary Mitsubishi-style frontend card.
 
 ## Development and API exploration
 
