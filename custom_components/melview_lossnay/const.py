@@ -36,3 +36,13 @@ PERCENTAGE_TO_FAN_VALUE = {
 }
 FAN_AUTO_VALUE = 0
 FAN_AUTO_PRESET = "Auto"
+
+# Confirmed Lossnay fan values (LGH-35RVX3-E).
+FAN_PRESET_TO_VALUE = {
+    "Auto": 0,
+    "Speed 1": 2,
+    "Speed 2": 3,
+    "Speed 3": 5,
+    "Speed 4": 6,
+}
+FAN_VALUE_TO_PRESET = {value: name for name, value in FAN_PRESET_TO_VALUE.items()}

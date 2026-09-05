@@ -10,9 +10,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
-    FAN_AUTO_PRESET,
-    FAN_AUTO_VALUE,
+    FAN_PRESET_TO_VALUE,
     FAN_VALUE_TO_PERCENTAGE,
+    FAN_VALUE_TO_PRESET,
     PERCENTAGE_TO_FAN_VALUE,
 )
 from .coordinator import LossnayCoordinator
@@ -40,7 +40,7 @@ class LossnayFan(LossnayEntity, FanEntity):
         | FanEntityFeature.TURN_OFF
     )
     _attr_speed_count = 4
-    _attr_preset_modes = [FAN_AUTO_PRESET]
+    _attr_preset_modes = list(FAN_PRESET_TO_VALUE)
 
     def __init__(self, coordinator: LossnayCoordinator, unit_id: str) -> None:
         super().__init__(coordinator, unit_id)
@@ -59,7 +59,9 @@ class LossnayFan(LossnayEntity, FanEntity):
             fan_value = int(self.state_data.get("setfan"))
         except (TypeError, ValueError):
             return None
-        if fan_value == FAN_AUTO_VALUE:
+
+        # Auto has no meaningful percentage.
+        if fan_value == 0:
             return None
         return FAN_VALUE_TO_PERCENTAGE.get(fan_value)
 
@@ -69,7 +71,7 @@ class LossnayFan(LossnayEntity, FanEntity):
             fan_value = int(self.state_data.get("setfan"))
         except (TypeError, ValueError):
             return None
-        return FAN_AUTO_PRESET if fan_value == FAN_AUTO_VALUE else None
+        return FAN_VALUE_TO_PRESET.get(fan_value)
 
     async def async_turn_on(
         self,
@@ -91,7 +93,7 @@ class LossnayFan(LossnayEntity, FanEntity):
             await self.async_turn_off()
             return
 
-        # Snap arbitrary HA percentages to the nearest of the four supported stages.
+        # Snap arbitrary HA percentages to the nearest supported stage.
         nearest = min(PERCENTAGE_TO_FAN_VALUE, key=lambda p: abs(p - percentage))
         value = PERCENTAGE_TO_FAN_VALUE[nearest]
         if not self.is_on:
@@ -99,8 +101,9 @@ class LossnayFan(LossnayEntity, FanEntity):
         await self.coordinator.async_send_command(self.unit_id, f"FS{value}")
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        if preset_mode != FAN_AUTO_PRESET:
+        value = FAN_PRESET_TO_VALUE.get(preset_mode)
+        if value is None:
             raise ValueError(f"Unsupported preset mode: {preset_mode}")
         if not self.is_on:
             await self.coordinator.async_send_command(self.unit_id, "PW1")
-        await self.coordinator.async_send_command(self.unit_id, "FS0")
+        await self.coordinator.async_send_command(self.unit_id, f"FS{value}")

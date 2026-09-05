@@ -5,7 +5,7 @@ A HACS-compatible custom Home Assistant integration for Mitsubishi Electric Loss
 This integration was built and tested around:
 
 - **Lossnay:** LGH-35RVX3-E
-- **Wi-Fi interface:** MAC-588IF-E (Melview reports `adaptortype: mac578`)
+- **Wi-Fi interface:** MAC-588IF-E 
 - **Melview device type:** `ERV`
 
 ## Features
@@ -97,3 +97,9 @@ logger:
 Restart Home Assistant, reproduce the problem, and inspect **Settings > System > Logs**.
 
 Do not share your password or authentication cookie when posting logs.
+
+## v0.1.1
+
+- Added a visible **Fan speed** selector with Auto and Speed 1-4.
+- Fan entity now exposes all five fan settings as preset modes.
+- Retains Home Assistant percentage control for the four fixed fan stages.
