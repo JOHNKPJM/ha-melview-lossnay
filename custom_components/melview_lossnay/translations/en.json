@@ -1,0 +1,23 @@
+{
+  "title": "Mitsubishi Lossnay (Melview)",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Mitsubishi Wi-Fi Control",
+        "description": "Use the same credentials as the Mitsubishi Electric AU/NZ Wi-Fi Control app.",
+        "data": {
+          "username": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "The email or password was rejected by Melview.",
+      "cannot_connect": "Could not connect to the Melview service.",
+      "no_erv": "The account authenticated successfully but no ERV/Lossnay unit was found."
+    },
+    "abort": {
+      "already_configured": "This Melview account is already configured."
+    }
+  }
+}

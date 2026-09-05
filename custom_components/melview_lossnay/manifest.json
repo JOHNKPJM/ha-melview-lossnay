@@ -1,0 +1,11 @@
+{
+  "domain": "melview_lossnay",
+  "name": "Mitsubishi Lossnay (Melview)",
+  "version": "0.1.0",
+  "config_flow": true,
+  "single_config_entry": true,
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "codeowners": [],
+  "requirements": []
+}
