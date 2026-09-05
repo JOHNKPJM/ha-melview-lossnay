@@ -366,3 +366,10 @@ Current integration direction:
 - Keep live-control mappings separate from native schedule mappings.
 - Do not assume values from air-conditioner integrations apply to ERV/Lossnay devices.
 - Prefer observing the official app/controller behaviour and diffing API responses before adding new write commands.
+
+
+## Home Assistant-managed scheduling
+
+The integration also provides a writable Home Assistant calendar. These events are not written to `schedule.aspx`; they are stored locally in Home Assistant and execute the confirmed `PW`, `MD`, and `FS` commands at event time.
+
+Native Melview schedule creation/update/delete is intentionally not implemented until the schedule write request format is confirmed.

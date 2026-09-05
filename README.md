@@ -5,7 +5,8 @@ A HACS-compatible custom Home Assistant integration for Mitsubishi Electric Loss
 This integration was built and tested around:
 
 - **Lossnay:** LGH-35RVX3-E
-- **Wi-Fi interface:** MAC-588IF-E - **Melview device type:** `ERV`
+- **Wi-Fi interface:** MAC-588IF-E (Melview reports `adaptortype: mac578`)
+- **Melview device type:** `ERV`
 
 ## Features
 
@@ -122,3 +123,63 @@ Schedule creation/edit/delete is intentionally not enabled yet because the Melvi
 ## Melview API notes
 
 Reverse-engineered endpoint and command documentation is available in [MELVIEW_API.md](MELVIEW_API.md).
+
+
+## Home Assistant-managed schedules
+
+Version 0.3.0 adds a writable **Home Assistant schedule** calendar for each Lossnay.
+
+This is separate from the read-only native Mitsubishi/Melview schedule. Events created in the Home Assistant schedule are stored by Home Assistant and execute normal Melview control commands at the scheduled time.
+
+Create an event in the **Home Assistant schedule** calendar and use one of these event titles:
+
+```text
+Power Off
+Auto
+Auto | Speed 1
+Auto | Speed 2
+Auto | Speed 3
+Auto | Speed 4
+Auto | Auto
+Bypass | Speed 1
+Lossnay | Speed 1
+Heat Recovery | Speed 4
+```
+
+`Lossnay` and `Heat Recovery` mean the same ventilation mode.
+
+If no fan value is included, the current fan setting is left unchanged:
+
+```text
+Auto
+Bypass
+Lossnay
+```
+
+You can alternatively put command fields in the event description:
+
+```text
+mode=Auto
+fan=Speed 2
+```
+
+or:
+
+```text
+power=off
+```
+
+Weekly recurring events are supported when Home Assistant supplies an RFC5545 weekly RRULE such as:
+
+```text
+FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
+```
+
+The Home Assistant-managed schedule can create, edit, and delete event series from the Home Assistant calendar UI.
+
+### Important distinction
+
+- **Native Melview schedule**: read-only in this integration and still managed by the Mitsubishi app.
+- **Home Assistant schedule**: writable in Home Assistant and executes Lossnay commands from Home Assistant.
+
+Avoid configuring overlapping native and Home Assistant schedules unless you intentionally want both control systems to act on the unit.
